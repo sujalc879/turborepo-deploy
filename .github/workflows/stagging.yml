@@ -50,6 +50,8 @@ jobs:
             # B. get into the folder
             cd project/turborepo-deploy/
 
+            cat ~/.bashrc
+
             # C. Build the app
             bun run build
 
