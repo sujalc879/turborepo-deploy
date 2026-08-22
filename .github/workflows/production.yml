@@ -1,0 +1,72 @@
+name: "Deploy to Production"
+
+on: 
+  push:
+    branches: 
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate and Run Remote Deploy
+        env: 
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          SSH_SECRET_SUJAL: ${{ secrets.SSH_SECRET_SUJAL }}
+        run: | 
+          # 1. setup local ssh configuration directory
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # 2. put ssh private key into respective file
+          echo "$SSH_SECRET_SUJAL" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # 3. Create a helper script to securely supply the passphrase to ssh-add
+          echo '#!/bin/bash' > ~/.ssh/askpass.sh
+          echo 'echo "$SSH_PASSPHRASE"' >> ~/.ssh/askpass.sh
+          chmod +x ~/.ssh/askpass.sh
+
+          # 4. Start the background SSH Agent daemon
+          eval $(ssh-agent -s)
+
+          # 5. Force feed the passphrase into the agent without an interactive prompt
+          export SSH_ASKPASS="$HOME/.ssh/askpass.sh"
+          export DISPLAY=":0"
+          setsid ssh-add ~/.ssh/id_ed25519 < /dev/null
+
+          # 6. Securely capture the remote server's cryptographic fingerprint
+          ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+
+          # 7. Execute multiple commands natively via a Heredoc block
+          ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_IP" bash -s << 'EOF'
+            echo "--- Starting remote deployment script ---"
+            
+            # A. Explicitly load Bun and PM2/NVM paths for non-interactive shells
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+            
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            # B. get into the folder
+            cd project/turborepo-deploy/ || exit 1
+
+            # C. pull the latest changes
+            git pull origin production
+
+            # C. Build the app
+            bun install
+            bun run build
+
+            # D. Restart all pm2 Processes
+            pm2 restart all
+            
+            echo "--- Deployment finished successfully ---"
+          EOF
+
+
+          # 8. Wipe the sensitive files completely off the ephemeral disk
+          rm -rf ~/.ssh/id_ed25519 ~/.ssh/askpass.sh
