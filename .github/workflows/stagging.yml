@@ -40,13 +40,14 @@ jobs:
           # 6. Securely capture the remote server's cryptographic fingerprint
           ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
 
-          # 7. Execute your commands natively over the encrypted connection
-          ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_IP" "echo 'Connected securely via Ed25519!'; uname -a"
+          # 7. Execute multiple commands natively via a Heredoc block
+          ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_IP" bash -s << 'EOF'
+            echo "--- Starting remote deployment script ---"
+            
+            ls -a
+
 
           # 8. Wipe the sensitive files completely off the ephemeral disk
           rm -rf ~/.ssh/id_ed25519 ~/.ssh/askpass.sh
-
-          # 9. Run test command
-          ls -a
 
 
