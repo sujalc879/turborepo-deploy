@@ -44,7 +44,17 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_IP" bash -s << 'EOF'
             echo "--- Starting remote deployment script ---"
             
-            ls -a
+            # A. update the machine
+            sudo apt-get update
+
+            # B. get into the folder
+            cd project/turborepo-deploy/
+
+            # C. Build the app
+            bun run build
+
+            # D. Restart all pm2 Processes
+            pm2 restart all
 
 
           # 8. Wipe the sensitive files completely off the ephemeral disk
