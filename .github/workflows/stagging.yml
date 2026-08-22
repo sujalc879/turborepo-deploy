@@ -1,20 +1,20 @@
-name : "Deploy to Stagging"
+name: "Deploy to Stagging"
 
-on : 
- push :
-    branches : 
-        - main
+on: 
+  push:
+    branches: 
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: load secrets
+      - name: Authenticate and Run Remote Deploy
         env: 
-            SERVER_IP: ${{ secrets.SERVER_IP }}
-            SERVER_USER: ${{ secrets.SERVER_USER }}
-            SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-            SSH_SECRET_SUJAL: ${{ secrets.SSH_SECRET_SUJAL }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          SSH_SECRET_SUJAL: ${{ secrets.SSH_SECRET_SUJAL }}
         run: | 
           # 1. setup local ssh configuration directory
           mkdir -p ~/.ssh
@@ -44,22 +44,24 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 "$SERVER_USER@$SERVER_IP" bash -s << 'EOF'
             echo "--- Starting remote deployment script ---"
             
-            # A. update the machine
-            sudo apt-get update
+            # A. Explicitly load Bun and PM2/NVM paths for non-interactive shells
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+            
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
             # B. get into the folder
-            cd project/turborepo-deploy/
-
-            cat ~/.bashrc
+            cd project/turborepo-deploy/ || exit 1
 
             # C. Build the app
             bun run build
 
             # D. Restart all pm2 Processes
             pm2 restart all
-
+            
+            echo "--- Deployment finished successfully ---"
+          EOF
 
           # 8. Wipe the sensitive files completely off the ephemeral disk
           rm -rf ~/.ssh/id_ed25519 ~/.ssh/askpass.sh
-
-          `EOF`
