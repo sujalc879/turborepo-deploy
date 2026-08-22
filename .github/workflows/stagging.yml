@@ -47,15 +47,6 @@ jobs:
             # A. update the machine
             sudo apt-get update
 
-            # B. get into the folder
-            cd project/turborepo-deploy/
-
-            # C. Build the app
-            bun run build
-
-            # D. Restart all pm2 Processes
-            pm2 restart all
-
 
           # 8. Wipe the sensitive files completely off the ephemeral disk
           rm -rf ~/.ssh/id_ed25519 ~/.ssh/askpass.sh
