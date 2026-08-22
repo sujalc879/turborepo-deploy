@@ -54,6 +54,9 @@ jobs:
             # B. get into the folder
             cd project/turborepo-deploy/ || exit 1
 
+            # C. pull the latest changes
+            git pull origin main
+
             # C. Build the app
             bun install
             bun run build
