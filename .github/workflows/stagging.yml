@@ -62,4 +62,4 @@ jobs:
           # 8. Wipe the sensitive files completely off the ephemeral disk
           rm -rf ~/.ssh/id_ed25519 ~/.ssh/askpass.sh
 
-          `EOF'
+          `EOF`
